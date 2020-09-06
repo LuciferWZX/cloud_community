@@ -1,0 +1,22 @@
+{
+  "scripts": {
+    "start": "node app.js",
+    "hot-start": "nodemon app.js"
+  },
+  "dependencies": {
+    "biguint-format": "^1.0.2",
+    "colors": "^1.4.0",
+    "flake-idgen": "^1.4.0",
+    "knex": "^0.21.5",
+    "koa": "^2.13.0",
+    "koa-body": "^4.2.0",
+    "koa-bodyparser": "^4.3.0",
+    "koa-logger": "^3.2.1",
+    "koa-onerror": "^4.1.0",
+    "koa-router": "^9.4.0",
+    "mysql": "^2.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
+}
