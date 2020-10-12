@@ -6,6 +6,7 @@ const controller = (app)=>{
     }).unless({
         path:[
             /\/user\/login/,
+            /\/user\/sendVerifyToEmail/,
             /\/user\/register/,
         ]
     }))

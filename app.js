@@ -21,14 +21,14 @@ app.use(koaBody);
 
 
 app.on('error', (err,ctx)=>{
-    console.error(`server-error ${err},${ctx}`.red);
+    console.error(`服务出错 ${err},${ctx}`.red);
 });
 //token出错
 app.use(function(ctx, next){
     return next().catch((err) => {
         if (401 === err.status) {
             ctx.status = 401;
-            ctx.body = 'Protected resource, use Authorization header to get access\n';
+            ctx.body = '受保护资源，token失效';
         } else {
             throw err;
         }

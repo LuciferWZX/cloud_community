@@ -35,8 +35,13 @@ const decrypt = (sign)=>{
  * @param obj
  * @returns {Promise<void>}
  */
-const insertItem=async (name,key,obj)=>{
-    await client.hset(name,key,JSON.stringify(obj))
+const insertItem=async (name,key,obj=null)=>{
+    if(obj){
+        await client.hset(name,key,JSON.stringify(obj))
+    }else{
+        await client.set(name,key);
+    }
+
 }
 /**
  * redis获取list
@@ -47,6 +52,21 @@ const insertItem=async (name,key,obj)=>{
 const getItem=async (name,key)=>{
    return await new Promise((resolve => {
          client.hget(name,key,(err,response)=>{
+            if(!err){
+                return resolve(JSON.parse(response))
+            }
+            return null
+        });
+    }))
+}
+/**
+ * 获取set
+ * @param name
+ * @returns {Promise<unknown>}
+ */
+const getString=async (name)=>{
+    return await new Promise((resolve => {
+        client.get(name,(err,response)=>{
             if(!err){
                 return resolve(JSON.parse(response))
             }
@@ -107,13 +127,64 @@ const getHeaderToken=(authorization,secret)=>{
     const jwt = require('jsonwebtoken');
     return jwt.verify(authorization.split(' ')[1],secret)
 }
+/**
+ * 发送邮箱验证码
+ * @param email
+ * @param config
+ * @param error
+ * @param success
+ * @returns {Promise<void>}
+ */
+const sendVerifyToEmail=async (email,config,{error,success})=>{
+    const node_mailer = require('nodemailer');
+    const smtpTransport = require('../../config/email_config');
+    const transport = node_mailer.createTransport(smtpTransport);
+
+    const data = await transport.sendMail(config,function (err,response){
+        if(err){
+            console.log("发送失败:",err)
+            error&&error(err);
+        }else{
+            console.log("发送成功");
+            success&&success(response)
+        }
+        transport.close();
+    });
+    console.log({data})
+}
+/**
+ * 邮箱验证
+ * @param email
+ * @returns {boolean}
+ */
+const checkEmail=(email)=>{
+    const REG = new RegExp("^[a-z0-9]+([._\\-]*[a-z0-9])*@([a-z0-9]+[-a-z0-9]*[a-z0-9]+.){1,63}[a-z0-9]+$");
+    return REG.test(email);
+}
+/**
+ * 生成随机数
+ * @param length
+ * @returns {string}
+ */
+const generateVerify=(length=6)=>{
+    let verify = "";
+    for(let i=0;i<length;i++)
+    {
+        verify+=Math.floor(Math.random()*10);
+    }
+    return verify
+}
 module.exports = {
     encryption,
     decrypt,
     insertItem,
+    getString,
     getItem,
     updateList,
     removeItem,
     generateToken,
-    getHeaderToken
+    getHeaderToken,
+    sendVerifyToEmail,
+    checkEmail,
+    generateVerify
 }
