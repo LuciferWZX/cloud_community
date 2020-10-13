@@ -31,15 +31,19 @@ const checkExistInUser=async ({columnName,value})=>{
  * @param username
  * @param password
  * @param email
+ * @param sex
+ * @param nickname
  * @returns {Promise<boolean>}
  */
-const isRegisterSuccess=async ({id,username,password,email})=>{
+const isRegisterSuccess=async ({id,username,password,email,sex,nickname})=>{
     const result = await knex(TB_USER)
         .insert({
             id,
             username,
             password,
-            email
+            email,
+            sex,
+            nickname
         })
         .timeout(TIMEOUT)
         .catch(err => {
@@ -72,6 +76,7 @@ const userLogin=async ({userColumn,username,password})=>{
             console.log(`用户登录出错${err.message} ,${err.stack}`.red);
             return null;
         });
+    console.log(result)
     if(result.length === 0){
         return null
     }

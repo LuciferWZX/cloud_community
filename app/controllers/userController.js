@@ -21,63 +21,70 @@ router.get('/user', function (ctx) {
  * 用户注册（简易版）
  * @param {password,username,email}
  */
-router.post('/user/register',async function (ctx) {
-    const {password, username,email} = ctx.request.body;
-    //查询用户名是否存在
-    const isUsernameExist =await checkExistInUser({
-        columnName:userModel.username,
-        value:username
-    });
-    //存在就返回提示
-    if(isUsernameExist){
-        return ctx.body={
-            code:CODE_STATUS.IS_EXIST,
-            message: "改用户名已存在！",
-            data:null
-        }
-    }
-    //查询邮箱是否存在
-    const isEmailExist = await checkExistInUser({columnName:userModel.email,value:email});
-    //存在就返回提示
-    if(isEmailExist){
-        return ctx.body={
-            code:CODE_STATUS.IS_EXIST,
-            message: "改邮箱已被注册！",
-            data:null
-        }
-    }
-    //生成雪花ID
-    const flakeIdGen = new FlakeId();
-    //插入数据库
-    const result = await isRegisterSuccess({
-        id:intFormat(flakeIdGen.next(), 'dec'),
-        username,
-        password:encryption(password),
-        email
-    })
-    //注册失败
-    if(!result){
-        return ctx.body={
-            code:CODE_STATUS.IS_FAILED,
-            message: "注册失败！",
-            data:null
-        }
-    }
-    //注册成功
-    return ctx.body={
-        code:CODE_STATUS.IS_OK,
-        message: "注册成功！",
-        data:null
-    }
-
-});
+// router.post('/user/register',async function (ctx) {
+//     const {password, username,email} = ctx.request.body;
+//     //查询用户名是否存在
+//     const isUsernameExist =await checkExistInUser({
+//         columnName:userModel.username,
+//         value:username
+//     });
+//     //存在就返回提示
+//     if(isUsernameExist){
+//         return ctx.body={
+//             code:CODE_STATUS.IS_EXIST,
+//             message: "改用户名已存在！",
+//             data:null
+//         }
+//     }
+//     //查询邮箱是否存在
+//     const isEmailExist = await checkExistInUser({columnName:userModel.email,value:email});
+//     //存在就返回提示
+//     if(isEmailExist){
+//         return ctx.body={
+//             code:CODE_STATUS.IS_EXIST,
+//             message: "改邮箱已被注册！",
+//             data:null
+//         }
+//     }
+//     //生成雪花ID
+//     const flakeIdGen = new FlakeId();
+//     //插入数据库
+//     const result = await isRegisterSuccess({
+//         id:intFormat(flakeIdGen.next(), 'dec'),
+//         username,
+//         password:encryption(password),
+//         email
+//     })
+//     //注册失败
+//     if(!result){
+//         return ctx.body={
+//             code:CODE_STATUS.IS_FAILED,
+//             message: "注册失败！",
+//             data:null
+//         }
+//     }
+//     //注册成功
+//     return ctx.body={
+//         code:CODE_STATUS.IS_OK,
+//         message: "注册成功！",
+//         data:null
+//     }
+//
+// });
 
 /**
  * 用户注册（邮箱注册）
  * @{password,username,email,verify}
  */
 router.post('/user/registerByEmail',async function (ctx) {
-    const {password, username,email,verify} = ctx.request.body;
+    const {
+        password,
+        username,
+        email,
+        verify,
+        sex,
+        nickname
+    } = ctx.request.body;
     //redis查询验证码
     const emailVerify = await getString(email);
     //redis里不存在验证码说明没有获取或者过期
@@ -96,6 +103,7 @@ router.post('/user/registerByEmail',async function (ctx) {
             data:null
         }
     }
+    console.log(0);
     //查询用户名是否存在
     const isUsernameExist =await checkExistInUser({
         columnName:userModel.username,
@@ -105,7 +113,7 @@ router.post('/user/registerByEmail',async function (ctx) {
     if(isUsernameExist){
         return ctx.body={
             code:CODE_STATUS.IS_EXIST,
-            message: "改用户名已存在！",
+            message: "该用户名已存在！",
             data:null
         }
     }
@@ -115,7 +123,7 @@ router.post('/user/registerByEmail',async function (ctx) {
     if(isEmailExist){
         return ctx.body={
             code:CODE_STATUS.IS_EXIST,
-            message: "改邮箱已被注册！",
+            message: "该邮箱已被注册！",
             data:null
         }
     }
@@ -127,7 +135,9 @@ router.post('/user/registerByEmail',async function (ctx) {
         id:intFormat(flakeIdGen.next(), 'dec'),
         username,
         password:encryption(password),
-        email
+        email,
+        sex,
+        nickname
     })
     //注册失败
     if(!result){
@@ -145,7 +155,6 @@ router.post('/user/registerByEmail',async function (ctx) {
     }
 
 });
-
 /**
  * 用户登录
  * @param password
@@ -167,6 +176,7 @@ router.post('/user/login',async function (ctx){
         password:encryption(password),
         username:username
     });
+
     if(result===null){
         return ctx.body={
             code:CODE_STATUS.NOT_EXIST,
@@ -195,7 +205,7 @@ router.post('/user/login',async function (ctx){
 router.get('/user/sendVerifyToEmail',async function (ctx){
     const {email}=ctx.request.query;
     if(!checkEmail(email)){
-        ctx.body={
+        return ctx.body={
             code:CODE_STATUS.IS_FAILED,
             data:null,
             message:"邮箱格式不正确"
@@ -208,33 +218,42 @@ router.get('/user/sendVerifyToEmail',async function (ctx){
     //存入redis
     await insertItem(email,verify);
     //设置过期时间
-    client.expire(email,60);
+    client.expire(email,300);
     //发送邮箱
-    await sendVerifyToEmail(email,{
-        from:"2396423791@qq.com",
-        to:email,
-        subject:"吞噬兽账号注册",
-        text:"别担心，只是测试",
-        html:mailHtml
-    },{
-        error:(e)=>{
-            //邮箱发送失败
-            ctx.body={
-                code:CODE_STATUS.EMAIL_SEND_ERR,
-                data:null,
-                message:"邮箱发送失败"
-            }
-        },
-        success:(response)=>{
-            //发送成功
-            ctx.body={
-                code:CODE_STATUS.IS_OK,
-                data:null,
-                message:"邮箱发送成功"
-            }
-        }
-    });
-
+    async function timeout() {
+        return new Promise((resolve, reject) => {
+            sendVerifyToEmail(email,{
+                from:"2396423791@qq.com",
+                to:email,
+                subject:"吞噬兽账号注册",
+                text:"别担心，只是测试",
+                html:mailHtml
+            },{
+                error:(e)=>{
+                    console.log('邮箱验证码发送失败'.red,e);
+                    //邮箱发送失败
+                    const state={
+                        code:CODE_STATUS.EMAIL_SEND_ERR,
+                        data:null,
+                        message:"验证码发送失败"
+                    }
+                    resolve(state);
+                },
+                success:(response)=>{
+                    const state={
+                        code:CODE_STATUS.IS_OK,
+                        data:null,
+                        message:"验证码发送成功"
+                    };
+                    //发送成功
+                    resolve(state);
+                }
+            });
+        })
+    }
+    await timeout().then(state => {
+        return ctx.body = state;
+    })
 });
 
 /**

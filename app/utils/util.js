@@ -68,7 +68,7 @@ const getString=async (name)=>{
     return await new Promise((resolve => {
         client.get(name,(err,response)=>{
             if(!err){
-                return resolve(JSON.parse(response))
+                return resolve(response)
             }
             return null
         });
@@ -140,7 +140,7 @@ const sendVerifyToEmail=async (email,config,{error,success})=>{
     const smtpTransport = require('../../config/email_config');
     const transport = node_mailer.createTransport(smtpTransport);
 
-    const data = await transport.sendMail(config,function (err,response){
+    await transport.sendMail(config,function (err,response){
         if(err){
             console.log("发送失败:",err)
             error&&error(err);
@@ -150,7 +150,6 @@ const sendVerifyToEmail=async (email,config,{error,success})=>{
         }
         transport.close();
     });
-    console.log({data})
 }
 /**
  * 邮箱验证
