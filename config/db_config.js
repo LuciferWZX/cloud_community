@@ -5,6 +5,7 @@ const knex = require('knex')({
         user:'root',
         password:'123456',
         database:'db_cloud_community'
-    }
+    },
+    debug:true
 });
 module.exports = knex;

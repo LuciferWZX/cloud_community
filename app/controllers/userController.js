@@ -103,7 +103,6 @@ router.post('/user/registerByEmail',async function (ctx) {
             data:null
         }
     }
-    console.log(0);
     //查询用户名是否存在
     const isUsernameExist =await checkExistInUser({
         columnName:userModel.username,
@@ -156,12 +155,12 @@ router.post('/user/registerByEmail',async function (ctx) {
 
 });
 /**
- * 用户登录
+ * 用户邮箱登录
  * @param password
  * @param username
  */
-router.post('/user/login',async function (ctx){
-    const {password, username} = ctx.request.body;
+router.post('/user/emailLogin',async function (ctx){
+    const {password, email} = ctx.request.body;
     const result = await userLogin({
         userColumn:[
             `${TB_USER}.${userModel.id}`,
@@ -169,19 +168,20 @@ router.post('/user/login',async function (ctx){
             `${TB_USER}.${userModel.email}`,
             `${TB_USER}.${userModel.auth}`,
             `${TB_USER}.${userModel.avatar}`,
+            `${TB_USER}.${userModel.nickname}`,
             `${TB_USER}.${userModel.phone}`,
             `${TB_USER}.${userModel.sex}`,
             `${TB_AUTH}.${authModel.authDesc}`,
         ],
         password:encryption(password),
-        username:username
+        email:email
     });
 
     if(result===null){
         return ctx.body={
             code:CODE_STATUS.NOT_EXIST,
             data:null,
-            message:"该用户不存在！"
+            message:"该用户不存在或者密码错误！"
         }
     }
     const token = generateToken({
@@ -276,5 +276,6 @@ router.get('/user/fetchCurrent',async function (ctx){
     }
 
 });
+
 
 module.exports = router;

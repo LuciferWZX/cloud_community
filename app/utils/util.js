@@ -60,6 +60,23 @@ const getItem=async (name,key)=>{
     }))
 }
 /**
+ * redis获取list
+ * @param name
+ * @param key
+ * @returns {Promise<unknown>}
+ */
+const getItemList=async (name)=>{
+    return await new Promise((resolve => {
+        client.lrange(name,0,-1,(err,response)=>{
+            console.log({err,response})
+            if(!err){
+                return resolve(response)
+            }
+            return null
+        });
+    }))
+}
+/**
  * 获取set
  * @param name
  * @returns {Promise<unknown>}
@@ -179,6 +196,7 @@ module.exports = {
     insertItem,
     getString,
     getItem,
+    getItemList,
     updateList,
     removeItem,
     generateToken,

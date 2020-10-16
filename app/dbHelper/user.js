@@ -60,10 +60,10 @@ const isRegisterSuccess=async ({id,username,password,email,sex,nickname})=>{
  * @param password
  * @returns {Promise<null|*>}
  */
-const userLogin=async ({userColumn,username,password})=>{
+const userLogin=async ({userColumn,email,password})=>{
     const result =await knex(TB_USER)
         .where({
-            [userModel.username]:username,
+            [userModel.email]:email,
             [userModel.password]:password
         })
         .join(TB_AUTH,`${TB_USER}.auth`,"=",`${TB_AUTH}.id`)
@@ -76,7 +76,6 @@ const userLogin=async ({userColumn,username,password})=>{
             console.log(`用户登录出错${err.message} ,${err.stack}`.red);
             return null;
         });
-    console.log(result)
     if(result.length === 0){
         return null
     }

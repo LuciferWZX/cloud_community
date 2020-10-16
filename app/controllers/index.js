@@ -1,4 +1,5 @@
 const users = require("./userController");
+const messages = require("./messageController");
 const koaJwt = require('koa-jwt');
 const controller = (app)=>{
     app.use(koaJwt({
@@ -7,11 +8,13 @@ const controller = (app)=>{
         path:[
             /\/user\/login/,
             /\/user\/sendVerifyToEmail/,
-            /\/user\/register/,
+            /\/user\/registerByEmail/,
+            /\/user\/emailLogin/,
         ]
     }))
     const routers=[
-        {name:'users',file:users}
+        {name:'users',file:users},
+        {name:'messages',file:messages},
     ];
     routers.forEach((router,index,array)=>{
         app.use(router.file.routes(), router.file.allowedMethods());
