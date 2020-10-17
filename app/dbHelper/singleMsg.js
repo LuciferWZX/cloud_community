@@ -5,6 +5,7 @@ const {TB_AUTH,TB_USER,TB_SINGLE_MSG} = require("./tables");
 const TIMEOUT = 1000;
 /**
  * 更具redis里面的个人conversations记录查询对方聊天信息状态
+ * @param uId
  * @param userIds
  * @returns {Promise<unknown>}
  */
@@ -52,12 +53,34 @@ const queryConversationsList=async (uId,userIds)=>{
                 .transacting(trx);
             queries.push(query);
         })
-
         Promise.all(queries)// Once every query is written
             .then(trx.commit)// We try to execute all of them
             .catch(trx.rollback)// And rollback in case any of them goes wrong
     });
 }
+/**
+ * 根据id查询聊天记录
+ * @param friendId
+ * @param limit
+ * @returns {Promise<null|*>}
+ */
+const queryChatList = async ({id,page=1,limit=10})=>{
+    console.log(111,id)
+    return await knex(TB_SINGLE_MSG)
+        .select()
+        .where(function () {
+            this.where(singleMsgModel.creatorId, id).orWhere(singleMsgModel.receiveId, id);
+        })
+        .andWhere(singleMsgModel.isDeleted, '!=', 1)
+        .limit(limit)
+        .offset((page - 1) * limit)
+        .timeout(TIMEOUT)
+        .catch(err => {
+            console.log(`查询聊天记录出错${err.message} ,${err.stack}`.red);
+            return null;
+        });
+}
 module.exports={
-    queryConversationsList
+    queryConversationsList,
+    queryChatList
 }

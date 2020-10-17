@@ -1,3 +1,8 @@
+const userModel = require("../models/user");
+const {getItem} = require("../utils/util");
+const {queryChatList} = require("../dbHelper/singleMsg");
+const {TB_USER} = require("../dbHelper/tables");
+const {queryFriendInfo} = require("../dbHelper/user");
 const {CODE_STATUS} = require("../../config/constants");
 const {queryConversationsList} = require("../dbHelper/singleMsg");
 
@@ -6,7 +11,9 @@ const {getHeaderToken} = require("../utils/util");
 const router = require('koa-router')();
 
 
-
+/**
+ * 根据token找到id,并更具id获取到交流列表
+ */
 router.get('/message/fetchConversations',async function (ctx){
     const {id} = getHeaderToken(ctx.header.authorization,'token');
     const conversationIds =await getItemList(id.concat(":conversation"));
@@ -37,5 +44,43 @@ router.get('/message/fetchConversations',async function (ctx){
     }
 
 })
+/**
+ * 更具好友id查询好友的状态和消息列表
+ */
+router.get('/message/friendChatData',async function (ctx){
+    const {friendId}=ctx.request.query;
+    try {
+        const friendInfo =await queryFriendInfo({
+            useColumn:[
+                `${TB_USER}.${userModel.id}`,
+                `${TB_USER}.${userModel.nickname}`,
+                `${TB_USER}.${userModel.avatar}`
+            ],
+            friendId:friendId
+        });
+        const chatList = await queryChatList({
+            id:friendId
+        });
+        const SOCKET_CLIENT="socket-client";
+        const friendSocketInfo = await getItem(SOCKET_CLIENT,friendId);
 
+        return ctx.body={
+            code:CODE_STATUS.IS_OK,
+            data: {
+                ...friendInfo,
+                chatList:chatList,
+                inputValue:"",
+                onlineStatus:friendSocketInfo&&friendSocketInfo.status||0
+            },
+            message:"获取成功"
+        }
+    }catch (e){
+        return ctx.body={
+            code:CODE_STATUS.IS_FAILED,
+            data: null,
+            message:"获取聊天列表失败"
+        }
+    }
+
+})
 module.exports = router;

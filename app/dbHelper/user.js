@@ -81,9 +81,35 @@ const userLogin=async ({userColumn,email,password})=>{
     }
     return result[0];
 }
+/**
+ * 查询好友某几个列，更具好友的id
+ * @param useColumn
+ * @param friendId
+ * @returns {Promise<null|*>}
+ */
+const queryFriendInfo=async ({useColumn,friendId})=>{
+    const result = await knex(TB_USER)
+        .select(
+            useColumn
+        )
+        .where({
+            [userModel.id]:friendId
+        })
+        .timeout(TIMEOUT)
+        .catch(err=>{
+            console.log(`查询该用户出错${err.message} ,${err.stack}`.red);
+            return null;
+        });
+    if(result.length === 0){
+        return null
+    }
+    return result[0];
+}
+
 
 module.exports = {
     checkExistInUser,
     isRegisterSuccess,
-    userLogin
+    userLogin,
+    queryFriendInfo
 }

@@ -6,6 +6,11 @@ const CODE_STATUS={
     EMAIL_SEND_ERR:301,
     VERIFY_EXPIRED:302,
 }
+const ONLINE_STATUS={
+    offline:0,//离线
+    online:1,//在线
+}
 module.exports={
-    CODE_STATUS
+    CODE_STATUS,
+    ONLINE_STATUS
 }

@@ -68,7 +68,6 @@ const getItem=async (name,key)=>{
 const getItemList=async (name)=>{
     return await new Promise((resolve => {
         client.lrange(name,0,-1,(err,response)=>{
-            console.log({err,response})
             if(!err){
                 return resolve(response)
             }
