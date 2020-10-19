@@ -4,6 +4,10 @@ const  {checkExistInUser,isRegisterSuccess} =require("../dbHelper/user") ;
 const intFormat = require("biguint-format");
 const FlakeId = require("flake-idgen");
 const authModel = require("../models/auth");
+const {checkValidToken} = require("../utils/util");
+const {getStringItem} = require("../utils/util");
+const {removeItem} = require("../utils/util");
+const {insertStringItem} = require("../utils/util");
 const {getString} = require("../utils/util");
 const {client} = require("../../config/redis_config");
 const {generateVerify} = require("../utils/util");
@@ -187,6 +191,11 @@ router.post('/user/emailLogin',async function (ctx){
     const token = generateToken({
         id:result.id
     },'token');
+    const userToken = getStringItem("user-token",result.id);
+    if(userToken){
+        await removeItem("users",result.id);
+    }
+    await insertStringItem("user-token",result.id,token);
     await insertItem("users", result.id,{...result, token});
     return ctx.body={
         code:CODE_STATUS.IS_OK,
@@ -260,15 +269,36 @@ router.get('/user/sendVerifyToEmail',async function (ctx){
  * 根据header里面的authorization里的token来获取redis里面的用户
  */
 router.get('/user/fetchCurrent',async function (ctx){
-   const {id} = getHeaderToken(ctx.header.authorization,'token');
-   const user =await getItem('users',id);
-   if(user){
+    const {id} = getHeaderToken(ctx.header.authorization,'token');
+    //验证token是否过期
+    const isOk = await checkValidToken(ctx.header.authorization);
+    if(!isOk){
+        ctx.status = 401;
+        ctx.body = '受保护资源，token失效';
+        return ctx
+    }
+
+    const user =await getItem('users',id);
+    if(user){
+        //const {_socket}=global;
+        //通知老的用户下线(目前返回的是新的用户的token和id)
+        _socket.emit("user-channel",JSON.stringify({
+            actionType:"force-user-logout",
+            response:{
+                code:200,
+                data:{
+                    id:user.id,
+                    token:user.token
+                },
+                message:'该用户正在其他地方登录'
+            }
+        }));
        return ctx.body={
            code:CODE_STATUS.IS_OK,
            data:user,
            message:"获取用户信息成功"
        }
-   }
+    }
     return ctx.body={
         code:CODE_STATUS.IS_FAILED,
         data:user,

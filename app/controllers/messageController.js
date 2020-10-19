@@ -48,7 +48,7 @@ router.get('/message/fetchConversations',async function (ctx){
  * 更具好友id查询好友的状态和消息列表
  */
 router.get('/message/friendChatData',async function (ctx){
-    const {friendId}=ctx.request.query;
+    const {friendId,id}=ctx.request.query;
     try {
         const friendInfo =await queryFriendInfo({
             useColumn:[
@@ -56,10 +56,12 @@ router.get('/message/friendChatData',async function (ctx){
                 `${TB_USER}.${userModel.nickname}`,
                 `${TB_USER}.${userModel.avatar}`
             ],
+
             friendId:friendId
         });
         const chatList = await queryChatList({
-            id:friendId
+            friendId:friendId,
+            id:id,
         });
         const SOCKET_CLIENT="socket-client";
         const friendSocketInfo = await getItem(SOCKET_CLIENT,friendId);

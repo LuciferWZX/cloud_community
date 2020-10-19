@@ -1,5 +1,6 @@
 
 const crypto = require('crypto');
+const {CODE_STATUS} = require("../../config/constants");
 const {client} = require("../../config/redis_config");
 const key = "9vApxLk5G3PAsJrM";
 const iv = "FnJL7EDzjqWjcaY9";
@@ -43,6 +44,9 @@ const insertItem=async (name,key,obj=null)=>{
     }
 
 }
+const insertStringItem=async (name,key,string)=>{
+    await client.hset(name,key,string);
+}
 /**
  * redis获取list
  * @param name
@@ -54,6 +58,16 @@ const getItem=async (name,key)=>{
          client.hget(name,key,(err,response)=>{
             if(!err){
                 return resolve(JSON.parse(response))
+            }
+            return null
+        });
+    }))
+}
+const getStringItem=async (name,key)=>{
+    return await new Promise((resolve => {
+        client.hget(name,key,(err,response)=>{
+            if(!err){
+                return resolve(response)
             }
             return null
         });
@@ -189,6 +203,17 @@ const generateVerify=(length=6)=>{
     }
     return verify
 }
+/**
+ * 校验是否token有效
+ * @param authorization
+ * @returns {Promise<boolean>}
+ */
+const checkValidToken =async (authorization)=>{
+    const {id} = getHeaderToken(authorization,'token');
+    const token = authorization.split(' ')[1];
+    const cToken = await getStringItem("user-token",id);
+    return token ===cToken
+}
 module.exports = {
     encryption,
     decrypt,
@@ -202,5 +227,8 @@ module.exports = {
     getHeaderToken,
     sendVerifyToEmail,
     checkEmail,
+    checkValidToken,
+    insertStringItem,
+    getStringItem,
     generateVerify
 }

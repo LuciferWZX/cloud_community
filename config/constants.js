@@ -5,6 +5,7 @@ const CODE_STATUS={
     NOT_EXIST:202,
     EMAIL_SEND_ERR:301,
     VERIFY_EXPIRED:302,
+    TOKEN_NOT_SAME:303,
 }
 const ONLINE_STATUS={
     offline:0,//离线

@@ -11,12 +11,14 @@ const {initSocket} = require("./config/socket_config");
 const app = new Koa();
 const serverPort = 3000;
 const controller=require("./app/controllers/index");
+const {getItem} = require("./app/utils/util");
+const {getHeaderToken} = require("./app/utils/util");
 const server = require('http').createServer(app.callback());
 const io = require('socket.io')(server);
 
 onerror(app);
 nodeRedis(app);//连接redis
-initSocket(io)
+initSocket(io);
 app.use(koaBody);
 
 
@@ -24,7 +26,8 @@ app.on('error', (err,ctx)=>{
     console.error(`服务出错 ${err},${ctx}`.red);
 });
 //token出错
-app.use(function(ctx, next){
+app.use(async function(ctx, next){
+
     return next().catch((err) => {
         if (401 === err.status) {
             ctx.status = 401;

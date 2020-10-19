@@ -28,7 +28,12 @@ const queryConversationsList=async (uId,userIds)=>{
                     `${TB_SINGLE_MSG}.${singleMsgModel.contentType} as type`,
                     `${TB_USER}.${userModel.avatar}`,
                     `${TB_USER}.${userModel.nickname}`,
-                    `${TB_SINGLE_MSG}.${singleMsgModel.creatorId} as friendId`,
+                    //`${TB_SINGLE_MSG}.${singleMsgModel.creatorId} as friendId`,
+                    {
+                        friendId:knex.raw(
+                            `(select ${userModel.id} from ${TB_USER} where ${userModel.id} = ${id} limit 1)`
+                        )
+                    },
                     {
                         unRead:knex.raw(
                             `(select count(*) from ${TB_SINGLE_MSG} where ${singleMsgModel.receiveId} = ${uId} and  ${singleMsgModel.creatorId} = ${id}  and ${singleMsgModel.isRead}=0)`
@@ -61,15 +66,19 @@ const queryConversationsList=async (uId,userIds)=>{
 /**
  * 根据id查询聊天记录
  * @param friendId
+ * @param id
+ * @param page
  * @param limit
  * @returns {Promise<null|*>}
  */
-const queryChatList = async ({id,page=1,limit=10})=>{
-    console.log(111,id)
+const queryChatList = async ({friendId,id,page=1,limit=10})=>{
     return await knex(TB_SINGLE_MSG)
         .select()
         .where(function () {
-            this.where(singleMsgModel.creatorId, id).orWhere(singleMsgModel.receiveId, id);
+            this.where(singleMsgModel.creatorId, friendId).andWhere(singleMsgModel.receiveId, id);
+        })
+        .orWhere(function () {
+            this.where(singleMsgModel.creatorId, id).andWhere(singleMsgModel.receiveId, friendId);
         })
         .andWhere(singleMsgModel.isDeleted, '!=', 1)
         .limit(limit)
