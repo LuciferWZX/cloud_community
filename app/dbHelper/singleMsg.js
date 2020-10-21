@@ -71,7 +71,7 @@ const queryConversationsList=async (uId,userIds)=>{
  * @param limit
  * @returns {Promise<null|*>}
  */
-const queryChatList = async ({friendId,id,page=1,limit=10})=>{
+const queryChatList = async ({friendId,id,page=1,limit=1000})=>{
     return await knex(TB_SINGLE_MSG)
         .select()
         .where(function () {
@@ -84,12 +84,61 @@ const queryChatList = async ({friendId,id,page=1,limit=10})=>{
         .limit(limit)
         .offset((page - 1) * limit)
         .timeout(TIMEOUT)
+        .orderBy(singleMsgModel.createTime, 'desc')
         .catch(err => {
             console.log(`查询聊天记录出错${err.message} ,${err.stack}`.red);
             return null;
         });
 }
+const hasMoreMessageList = async ({friendId,id,page=1,limit=1000})=>{
+    const msgCount = await knex(TB_SINGLE_MSG)
+        .count('id' , {as: 'total'})
+        .where(function () {
+            this.where(singleMsgModel.creatorId, friendId).andWhere(singleMsgModel.receiveId, id);
+        })
+        .orWhere(function () {
+            this.where(singleMsgModel.creatorId, id).andWhere(singleMsgModel.receiveId, friendId);
+        })
+        .andWhere(singleMsgModel.isDeleted, '!=', 1)
+        .timeout(TIMEOUT)
+        //.orderBy(singleMsgModel.createTime, 'desc')
+        .catch(err => {
+            console.log(`查询聊天记录出错${err.message} ,${err.stack}`.red);
+            return null;
+        });
+    return page * limit < msgCount[0].total;
+
+}
+const saveSingleMessage = async (msgColumn)=>{
+
+     const data = await knex(TB_SINGLE_MSG)
+        .insert({
+            [`${singleMsgModel.creatorId}`]: msgColumn.creatorId,
+            [`${singleMsgModel.receiveId}`]: msgColumn.receiveId,
+            [`${singleMsgModel.contentType}`]: msgColumn.contentType,
+            [`${singleMsgModel.content}`]: msgColumn.content,
+        })
+         .timeout(TIMEOUT)
+         .catch(err => {
+             console.log(`新增聊天记录出错${err.message} ,${err.stack}`.red);
+             return null;
+         });
+    if(data.length>0){
+        return await knex((TB_SINGLE_MSG))
+            .select()
+            .where(`${singleMsgModel.id}`, '=', data[0])
+            .timeout(TIMEOUT)
+            .catch(err => {
+                console.log(`查询新增聊天记录出错${err.message} ,${err.stack}`.red);
+                return null;
+            })
+    }
+    return data
+
+}
 module.exports={
     queryConversationsList,
-    queryChatList
+    queryChatList,
+    saveSingleMessage,
+    hasMoreMessageList
 }

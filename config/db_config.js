@@ -4,7 +4,8 @@ const knex = require('knex')({
         host:'127.0.0.1',
         user:'root',
         password:'123456',
-        database:'db_cloud_community'
+        database:'db_cloud_community',
+        charset:'UTF8MB4_GENERAL_CI'
     },
     debug:false
 });

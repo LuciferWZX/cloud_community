@@ -1,4 +1,9 @@
+
+
 const userModel = require("../models/user");
+const {hasMoreMessageList} = require("../dbHelper/singleMsg");
+const {ChatType} = require("../utils/constant");
+const {saveSingleMessage} = require("../dbHelper/singleMsg");
 const {getItem} = require("../utils/util");
 const {queryChatList} = require("../dbHelper/singleMsg");
 const {TB_USER} = require("../dbHelper/tables");
@@ -56,21 +61,24 @@ router.get('/message/friendChatData',async function (ctx){
                 `${TB_USER}.${userModel.nickname}`,
                 `${TB_USER}.${userModel.avatar}`
             ],
-
             friendId:friendId
         });
         const chatList = await queryChatList({
             friendId:friendId,
             id:id,
         });
+        const hasMore = await hasMoreMessageList({
+            friendId:friendId,
+            id:id,
+        });
         const SOCKET_CLIENT="socket-client";
         const friendSocketInfo = await getItem(SOCKET_CLIENT,friendId);
-
         return ctx.body={
             code:CODE_STATUS.IS_OK,
             data: {
                 ...friendInfo,
-                chatList:chatList,
+                chatList:chatList.reverse(),
+                hasMore:hasMore,
                 inputValue:"",
                 onlineStatus:friendSocketInfo&&friendSocketInfo.status||0
             },
@@ -84,5 +92,29 @@ router.get('/message/friendChatData',async function (ctx){
         }
     }
 
+})
+
+router.post('/message/sendMsg',async function (ctx){
+    const {message,type,creatorId,receiveId}=ctx.request.body;
+    const data = await saveSingleMessage({
+        creatorId,
+        receiveId,
+        contentType: type,
+        content:message
+    })
+    //console.log(99,data[0]);
+    if(data.length>0){
+        global._socket.emit("receive-new-message",JSON.stringify(data[0]))
+        return ctx.body={
+            code:CODE_STATUS.IS_OK,
+            data: data[0],
+            message:"保存成功"
+        }
+    }
+    return ctx.body={
+        code:CODE_STATUS.IS_FAILED,
+        data: null,
+        message:"保存失败"
+    }
 })
 module.exports = router;

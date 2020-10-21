@@ -214,6 +214,20 @@ const checkValidToken =async (authorization)=>{
     const cToken = await getStringItem("user-token",id);
     return token ===cToken
 }
+/**
+ * 字符串分割数组
+ * @param msg 分割的字符串
+ * @param len 分割的长度
+ * @returns {[]}
+ */
+const splitStringToArray = (msg,len)=>{
+    const num = Math.ceil((msg.length)/len);
+    let tempArr = [];
+    for (let i=0;i<num;i++){
+        tempArr.push(msg.substring(i*len,(i+1)*len))
+    }
+    return tempArr
+}
 module.exports = {
     encryption,
     decrypt,
@@ -230,5 +244,6 @@ module.exports = {
     checkValidToken,
     insertStringItem,
     getStringItem,
-    generateVerify
+    generateVerify,
+    splitStringToArray
 }
