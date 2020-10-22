@@ -15,20 +15,30 @@ const queryConversationsList=async (uId,userIds)=>{
         userIds.forEach(id=>{
             const query = knex(TB_SINGLE_MSG)
                 .where(function (){
-                    this.where(singleMsgModel.creatorId, id).orWhere(singleMsgModel.receiveId, id);
+                    this.where(singleMsgModel.creatorId, id).andWhere(singleMsgModel.receiveId, uId);
                 })
-                .andWhere(function (){
-                    this.where(`${TB_USER}.${userModel.id}`, '=', id)
+                .orWhere(function (){
+                    this.where(singleMsgModel.creatorId, uId).andWhere(singleMsgModel.receiveId, id);
+                    //this.where(`${TB_USER}.${userModel.id}`, '=', id)
                 })
                 .andWhere(singleMsgModel.isDeleted, '!=', 1)
+
                 .column(
                     `${TB_SINGLE_MSG}.${singleMsgModel.id}`,
                    `${TB_SINGLE_MSG}.${singleMsgModel.createTime}`,
                     `${TB_SINGLE_MSG}.${singleMsgModel.content}`,
                     `${TB_SINGLE_MSG}.${singleMsgModel.contentType} as type`,
-                    `${TB_USER}.${userModel.avatar}`,
-                    `${TB_USER}.${userModel.nickname}`,
+                    {
+                        nickname:knex.raw(
+                            `(select ${userModel.nickname} from ${TB_USER} where ${userModel.id} = ${id} limit 1)`
+                        )
+                    },
                     //`${TB_SINGLE_MSG}.${singleMsgModel.creatorId} as friendId`,
+                    {
+                        avatar:knex.raw(
+                            `(select ${userModel.avatar} from ${TB_USER} where ${userModel.id} = ${id} limit 1)`
+                        )
+                    },
                     {
                         friendId:knex.raw(
                             `(select ${userModel.id} from ${TB_USER} where ${userModel.id} = ${id} limit 1)`
@@ -42,22 +52,12 @@ const queryConversationsList=async (uId,userIds)=>{
                 )
                 .select()
                 .orderBy(singleMsgModel.createTime, "desc")
-                .join(TB_USER, function() {
-                    this.on(
-                        `${TB_SINGLE_MSG}.${singleMsgModel.creatorId}`,
-                        '=',
-                        `${TB_USER}.${userModel.id}`
-                    ).orOn(
-                        `${TB_SINGLE_MSG}.${singleMsgModel.receiveId}`,
-                        '=',
-                        `${TB_USER}.${userModel.id}`
-                    )
-                })
-                .timeout(TIMEOUT)
                 .limit(1)
+                .timeout(TIMEOUT)
                 .transacting(trx);
             queries.push(query);
         })
+        console.log(111,queries)
         Promise.all(queries)// Once every query is written
             .then(trx.commit)// We try to execute all of them
             .catch(trx.rollback)// And rollback in case any of them goes wrong

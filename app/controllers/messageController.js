@@ -93,7 +93,9 @@ router.get('/message/friendChatData',async function (ctx){
     }
 
 })
-
+/**
+ * 发送文字信息
+ */
 router.post('/message/sendMsg',async function (ctx){
     const {message,type,creatorId,receiveId}=ctx.request.body;
     const data = await saveSingleMessage({
@@ -104,6 +106,7 @@ router.post('/message/sendMsg',async function (ctx){
     })
     //console.log(99,data[0]);
     if(data.length>0){
+        //通知对方来了新的消息
         global._socket.emit("receive-new-message",JSON.stringify(data[0]))
         return ctx.body={
             code:CODE_STATUS.IS_OK,
