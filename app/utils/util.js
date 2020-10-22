@@ -122,7 +122,7 @@ const removeItem = async (name,key)=>{
  * @returns {Promise<void>}
  */
 const updateList=async (name,{updateByKey,keyValue},newObj)=>{
-    const list = await  getList(name);
+    const list = await getList(name);
     let index = -1;
     for (let i=0;i<list.length;i++){
         if(list[i][updateByKey] === keyValue){

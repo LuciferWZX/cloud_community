@@ -306,6 +306,27 @@ router.get('/user/fetchCurrent',async function (ctx){
     }
 
 });
+/**
+ * 用户退出登录
+ */
+router.get('/user/logout',async function (ctx){
+    const {id} = getHeaderToken(ctx.header.authorization,'token');
+    try{
+        await removeItem('user-token',id);
+        await removeItem('users',id);
+        return ctx.body={
+            code:CODE_STATUS.IS_OK,
+            data:null,
+            message:"退出登录成功"
+        }
+    }catch (e){
+        return ctx.body={
+            code:CODE_STATUS.IS_FAILED,
+            data:null,
+            message:e.toString()
+        }
+    }
 
 
+});
 module.exports = router;

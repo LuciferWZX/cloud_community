@@ -11,8 +11,6 @@ const {initSocket} = require("./config/socket_config");
 const app = new Koa();
 const serverPort = 3000;
 const controller=require("./app/controllers/index");
-const {getItem} = require("./app/utils/util");
-const {getHeaderToken} = require("./app/utils/util");
 const server = require('http').createServer(app.callback());
 const io = require('socket.io')(server);
 
