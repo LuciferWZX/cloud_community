@@ -1,6 +1,8 @@
 
 
 const userModel = require("../models/user");
+const {updateMessageStatusByFriendIds} = require("../dbHelper/singleMsg");
+const {updateMessageStatusByMsgIds} = require("../dbHelper/singleMsg");
 const {hasMoreMessageList} = require("../dbHelper/singleMsg");
 const {ChatType} = require("../utils/constant");
 const {saveSingleMessage} = require("../dbHelper/singleMsg");
@@ -119,5 +121,64 @@ router.post('/message/sendMsg',async function (ctx){
         data: null,
         message:"保存失败"
     }
+})
+/**
+ * 更新消息的状态为已读
+ */
+router.post('/message/updateMessages',async function (ctx){
+    const {receiveId,dependFriendId,ids}=ctx.request.body;
+    if(dependFriendId){
+        try{
+            const result =await updateMessageStatusByFriendIds(receiveId,ids);
+            if(result){
+                return ctx.body={
+                    code:CODE_STATUS.IS_OK,
+                    data: null,
+                    message:"更新成功"
+                }
+            }
+            return ctx.body={
+                code:CODE_STATUS.IS_FAILED,
+                data: null,
+                message:"更新失败"
+            }
+        }catch (e){
+            return ctx.body={
+                code:CODE_STATUS.IS_FAILED,
+                data: null,
+                message:"sql异常"
+            }
+        }
+    }else{
+        try{
+            const result =await updateMessageStatusByMsgIds(ids);
+            if(result){
+                window._socket.emit("message-is-read-singleIds",JSON.stringify({
+                    receiveId,
+                    ids
+                }))
+                return ctx.body={
+                    code:CODE_STATUS.IS_OK,
+                    data: null,
+                    message:"更新成功"
+                }
+            }
+            return ctx.body={
+                code:CODE_STATUS.IS_FAILED,
+                data: null,
+                message:"更新失败"
+            }
+        }catch (e){
+            return ctx.body={
+                code:CODE_STATUS.IS_FAILED,
+                data: null,
+                message:"sql异常"
+            }
+        }
+
+    }
+    // receiveId: number;
+    // dependFriendId:boolean; //是否更具好友id去更新
+    // ids: Array<number|string>;
 })
 module.exports = router;

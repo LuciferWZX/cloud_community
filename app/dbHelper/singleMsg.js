@@ -90,6 +90,14 @@ const queryChatList = async ({friendId,id,page=1,limit=1000})=>{
             return null;
         });
 }
+/**
+ * 分页查询是否更多
+ * @param friendId
+ * @param id
+ * @param page
+ * @param limit
+ * @returns {Promise<boolean>}
+ */
 const hasMoreMessageList = async ({friendId,id,page=1,limit=1000})=>{
     const msgCount = await knex(TB_SINGLE_MSG)
         .count('id' , {as: 'total'})
@@ -109,6 +117,11 @@ const hasMoreMessageList = async ({friendId,id,page=1,limit=1000})=>{
     return page * limit < msgCount[0].total;
 
 }
+/**
+ * 保存一条消息
+ * @param msgColumn
+ * @returns {Promise<UnknownToAny<number>[]|TResult extends DeferredKeySelection.Any ? DeferredKeySelection.ResolveOne<TResult> : (TResult extends DeferredKeySelection.Any[] ? DeferredKeySelection.ResolveOne<TResult[0]>[] : (TResult extends infer I[] ? UnknownToAny<I>[] : UnknownToAny<TResult>))>}
+ */
 const saveSingleMessage = async (msgColumn)=>{
 
      const data = await knex(TB_SINGLE_MSG)
@@ -136,9 +149,57 @@ const saveSingleMessage = async (msgColumn)=>{
     return data
 
 }
+/**
+ * 更具message的ids去更新消息的状态
+ * @param ids
+ * @returns {Promise<boolean>}
+ */
+const updateMessageStatusByMsgIds = async (ids)=>{
+    const result = await knex.transaction(trx=>{
+        const queries = [];
+        ids.forEach(msgId=>{
+            const query = knex(TB_SINGLE_MSG)
+                .where(singleMsgModel.id,msgId)
+                .update({
+                    [singleMsgModel.isRead]:1
+                })
+                .timeout(TIMEOUT)
+                .transacting(trx);
+            queries.push(query);
+        });
+        Promise.all(queries) // Once every query is written
+            .then(trx.commit) // We try to execute all of them
+            .catch(trx.rollback);// And rollback in case any of them goes wrong
+    })
+    return result.length > 0;
+}
+const updateMessageStatusByFriendIds = async (id,ids)=>{
+    const result = await knex.transaction(trx=>{
+        const queries = [];
+        ids.forEach(friendId=>{
+            const query = knex(TB_SINGLE_MSG)
+                .where({
+                    [singleMsgModel.creatorId]:friendId,
+                    [singleMsgModel.receiveId]:id,
+                })
+                .update({
+                    [singleMsgModel.isRead]:1
+                })
+                .timeout(TIMEOUT)
+                .transacting(trx);
+            queries.push(query);
+        });
+        Promise.all(queries) // Once every query is written
+            .then(trx.commit) // We try to execute all of them
+            .catch(trx.rollback);// And rollback in case any of them goes wrong
+    })
+    return result.length > 0;
+}
 module.exports={
     queryConversationsList,
     queryChatList,
     saveSingleMessage,
-    hasMoreMessageList
+    hasMoreMessageList,
+    updateMessageStatusByMsgIds,
+    updateMessageStatusByFriendIds
 }
