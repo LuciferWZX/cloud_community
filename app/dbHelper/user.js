@@ -1,6 +1,7 @@
 const knex = require('../../config/db_config');
 const userModel = require("../models/user");
-const {TB_AUTH,TB_USER} = require("./tables");
+const friendModel = require("../models/friend");
+const {TB_AUTH,TB_USER,TB_FRIEND} = require("./tables");
 
 const TIMEOUT = 1000;
 /**
@@ -35,7 +36,7 @@ const checkExistInUser=async ({columnName,value})=>{
  * @param nickname
  * @returns {Promise<boolean>}
  */
-const isRegisterSuccess=async ({id,username,password,email,sex,nickname})=>{
+const isRegisterSuccess=async ({id,username,password,email,sex,nickname,avatar})=>{
     const result = await knex(TB_USER)
         .insert({
             id,
@@ -43,7 +44,8 @@ const isRegisterSuccess=async ({id,username,password,email,sex,nickname})=>{
             password,
             email,
             sex,
-            nickname
+            nickname,
+            avatar
         })
         .timeout(TIMEOUT)
         .catch(err => {
@@ -106,10 +108,50 @@ const queryFriendInfo=async ({useColumn,friendId})=>{
     return result[0];
 }
 
+const searchUserByNicknameOrEmail = async (param,id)=>{
+    const result = await knex(TB_USER)
+        .select()
+        .column(
+            `${TB_USER}.${userModel.id}`,
+            `${TB_USER}.${userModel.nickname}`,
+            `${TB_USER}.${userModel.avatar}`,
+            `${TB_USER}.${userModel.email}`,
+            )
+        .where(function (){
+            this.where(userModel.nickname,param).orWhere(userModel.email,param)
+        })
+        .andWhere(
+            userModel.id,'!=',id
+        )
+        .limit(1)
+        .timeout(TIMEOUT)
+        .catch(err=>{
+            console.log(`查询该用户出错${err.message} ,${err.stack}`.red);
+            return null;
+        });
+
+    if(result.length>0){
+        const result2 = await knex(TB_FRIEND)
+            .select(friendModel.inviteStatus)
+            .where(function (){
+                this.where(friendModel.sendId,"=",id).andWhere(friendModel.receiveId,result[0].id)
+            })
+        let inviteStatus;
+        if(result2.length>0){
+            inviteStatus=result2[0].invite_status
+        }else{
+            //未找到该好友的申请
+            inviteStatus=-1
+        }
+        return {...result[0],inviteStatus:inviteStatus}
+    }
+    return  null
+}
 
 module.exports = {
     checkExistInUser,
     isRegisterSuccess,
     userLogin,
-    queryFriendInfo
+    queryFriendInfo,
+    searchUserByNicknameOrEmail
 }

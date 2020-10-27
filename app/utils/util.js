@@ -44,6 +44,15 @@ const insertItem=async (name,key,obj=null)=>{
     }
 
 }
+/**
+ * 插入list
+ * @param name
+ * @param string
+ * @returns {Promise<void>}
+ */
+const insertListItem=async (name,arr)=>{
+    await client.rpush(name,arr);
+}
 const insertStringItem=async (name,key,string)=>{
     await client.hset(name,key,string);
 }
@@ -235,6 +244,7 @@ module.exports = {
     getString,
     getItem,
     getItemList,
+    insertListItem,
     updateList,
     removeItem,
     generateToken,

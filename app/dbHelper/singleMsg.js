@@ -1,7 +1,8 @@
 const knex = require('../../config/db_config');
 const singleMsgModel = require("../models/singleMsg");
 const userModel = require("../models/user");
-const {TB_AUTH,TB_USER,TB_SINGLE_MSG} = require("./tables");
+const friendModal = require("../models/friend");
+const {TB_FRIEND,TB_USER,TB_SINGLE_MSG} = require("./tables");
 const TIMEOUT = 1000;
 /**
  * 更具redis里面的个人conversations记录查询对方聊天信息状态
@@ -173,6 +174,12 @@ const updateMessageStatusByMsgIds = async (ids)=>{
     })
     return result.length > 0;
 }
+/**
+ * 根据friendId去更新消息的状态
+ * @param id
+ * @param ids
+ * @returns {Promise<boolean>}
+ */
 const updateMessageStatusByFriendIds = async (id,ids)=>{
     const result = await knex.transaction(trx=>{
         const queries = [];
@@ -195,11 +202,51 @@ const updateMessageStatusByFriendIds = async (id,ids)=>{
     })
     return result.length > 0;
 }
+/**
+ * 发送好友邀请
+ * @param sendId
+ * @param receiveId
+ * @param desc
+ * @returns {Promise<number>}
+ */
+const addInviteToFriend = async ({sendId,receiveId,desc})=>{
+    const data = await knex(TB_FRIEND)
+        .insert({
+            [friendModal.sendId]:sendId,
+            [friendModal.receiveId]:receiveId,
+            [friendModal.desc]:desc,
+        })
+        .timeout(TIMEOUT)
+        .catch(err => {
+            console.log(`插入邀请失败${err.message} ,${err.stack}`.red);
+            return null;
+        })
+    return data.length
+
+}
+const checkInviteMessage = async ({sendId,receiveId})=>{
+    const data = await knex(TB_FRIEND)
+        .select(friendModal.id)
+        .where({
+            [friendModal.sendId]:sendId,
+            [friendModal.receiveId]:receiveId,
+        })
+        .whereNotIn(friendModal.inviteStatus,[1,2])
+        .timeout(TIMEOUT)
+        .catch(err => {
+            console.log(`插入邀请失败${err.message} ,${err.stack}`.red);
+            return null;
+        })
+    return data.length
+
+}
 module.exports={
     queryConversationsList,
     queryChatList,
     saveSingleMessage,
     hasMoreMessageList,
     updateMessageStatusByMsgIds,
-    updateMessageStatusByFriendIds
+    updateMessageStatusByFriendIds,
+    addInviteToFriend,
+    checkInviteMessage
 }

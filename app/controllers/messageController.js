@@ -1,20 +1,24 @@
 
 
 const userModel = require("../models/user");
-const {updateMessageStatusByFriendIds} = require("../dbHelper/singleMsg");
-const {updateMessageStatusByMsgIds} = require("../dbHelper/singleMsg");
-const {hasMoreMessageList} = require("../dbHelper/singleMsg");
-const {ChatType} = require("../utils/constant");
-const {saveSingleMessage} = require("../dbHelper/singleMsg");
-const {getItem} = require("../utils/util");
-const {queryChatList} = require("../dbHelper/singleMsg");
-const {TB_USER} = require("../dbHelper/tables");
+const {
+    updateMessageStatusByFriendIds,
+    updateMessageStatusByMsgIds,
+    hasMoreMessageList,
+    saveSingleMessage,
+    queryChatList,
+    addInviteToFriend,
+    checkInviteMessage,
+    queryConversationsList
+} = require("../dbHelper/singleMsg");
 const {queryFriendInfo} = require("../dbHelper/user");
+const {
+    getItem,
+    getHeaderToken,
+    getItemList
+} = require("../utils/util");
+const {TB_USER} = require("../dbHelper/tables");
 const {CODE_STATUS} = require("../../config/constants");
-const {queryConversationsList} = require("../dbHelper/singleMsg");
-
-const {getItemList} = require("../utils/util");
-const {getHeaderToken} = require("../utils/util");
 const router = require('koa-router')();
 
 
@@ -24,6 +28,7 @@ const router = require('koa-router')();
 router.get('/message/fetchConversations',async function (ctx){
     const {id} = getHeaderToken(ctx.header.authorization,'token');
     const conversationIds =await getItemList(id.concat(":conversation"));
+    console.log(111,conversationIds)
     try {
         const data = await queryConversationsList(id,conversationIds);
         const result = data.flat();
@@ -177,8 +182,48 @@ router.post('/message/updateMessages',async function (ctx){
         }
 
     }
-    // receiveId: number;
-    // dependFriendId:boolean; //是否更具好友id去更新
-    // ids: Array<number|string>;
+})
+/**
+ * 发送好友邀请
+ */
+router.post('/message/sendInviteMessage',async function (ctx){
+    const {id} = getHeaderToken(ctx.header.authorization,'token');
+    const {desc,fid}=ctx.request.body;
+    try {
+        const alreadySend = await checkInviteMessage({
+            sendId:id,
+            receiveId:fid
+        })
+        if(alreadySend){
+            return ctx.body={
+                code:CODE_STATUS.IS_FAILED,
+                data: null,
+                message:"已发送过邀请，请等待回复"
+            }
+        }
+        const data =await addInviteToFriend({
+            desc,
+            sendId:id,
+            receiveId:fid
+        });
+        if(data){
+            return ctx.body={
+                code:CODE_STATUS.IS_OK,
+                data: null,
+                message:"邀请以及发送，请等待对方通过"
+            }
+        }
+        return ctx.body={
+            code:CODE_STATUS.IS_FAILED,
+            data: null,
+            message:"邀请发送失败"
+        }
+    }catch (e){
+        return ctx.body={
+            code:CODE_STATUS.IS_FAILED,
+            data: null,
+            message:e.toString()
+        }
+    }
 })
 module.exports = router;

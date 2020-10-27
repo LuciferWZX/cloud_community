@@ -4,22 +4,30 @@ const  {checkExistInUser,isRegisterSuccess} =require("../dbHelper/user") ;
 const intFormat = require("biguint-format");
 const FlakeId = require("flake-idgen");
 const authModel = require("../models/auth");
-const {checkValidToken} = require("../utils/util");
-const {getStringItem} = require("../utils/util");
-const {removeItem} = require("../utils/util");
-const {insertStringItem} = require("../utils/util");
-const {getString} = require("../utils/util");
+const {saveSingleMessage} = require("../dbHelper/singleMsg");
+const {searchUserByNicknameOrEmail,userLogin} = require("../dbHelper/user");
+const {
+    checkValidToken,
+    getStringItem,
+    removeItem,
+    insertStringItem,
+    getString,
+    generateVerify,
+    checkEmail,
+    sendVerifyToEmail,
+    encryption,
+    generateToken,
+    insertItem,
+    getHeaderToken,
+    getItem,
+    insertListItem
+} = require("../utils/util");
+
 const {client} = require("../../config/redis_config");
-const {generateVerify} = require("../utils/util");
-const {checkEmail} = require("../utils/util");
-const {sendVerifyToEmail} = require("../utils/util");
 const {TB_USER,TB_AUTH} = require("../dbHelper/tables");
-const {userLogin} = require("../dbHelper/user");
-const {encryption,generateToken,insertItem,getHeaderToken,getItem} = require("../utils/util");
+
 const router = require('koa-router')();
-router.get('/user', function (ctx) {
-    ctx.body = 'this is a users response!'
-});
+
 
 /**
  * 用户注册（简易版）
@@ -133,13 +141,33 @@ router.post('/user/registerByEmail',async function (ctx) {
 
     //生成雪花ID
     const flakeIdGen = new FlakeId();
+    const id = intFormat(flakeIdGen.next(), 'dec');
+    //将我的id加入他们的消息列表中
+    await insertListItem(`${id}:conversation`,["6721356004241440768","6726762769837719552"]);
+    //我添加
+    await insertListItem(`6721356004241440768:conversation`,id);
+    //我先发送一条消息给他
+    await saveSingleMessage({
+        creatorId:"6721356004241440768",
+        receiveId:id,
+        contentType: 0,
+        content:"欢迎使用我的聊天系统，目前还未开发完成"
+    });
+    //测试账号
+    await saveSingleMessage({
+        creatorId:"6726762769837719552",
+        receiveId:id,
+        contentType: 0,
+        content:"我是测试账号"
+    });
     //插入数据库
     const result = await isRegisterSuccess({
-        id:intFormat(flakeIdGen.next(), 'dec'),
+        id:id,
         username,
         password:encryption(password),
         email,
         sex,
+        avatar:"https://ss1.bdstatic.com/70cFuXSh_Q1YnxGkpoWK1HF6hhy/it/u=2885279926,3290523587&fm=26&gp=0.jpg",
         nickname
     })
     //注册失败
@@ -329,4 +357,26 @@ router.get('/user/logout',async function (ctx){
 
 
 });
+/**
+ * 精确查询用户，只匹配一人
+ */
+router.get('/user/searchUser',async function (ctx){
+    const {id} = getHeaderToken(ctx.header.authorization,'token');
+    const {searchValue}=ctx.request.query;
+    try{
+        const data =await searchUserByNicknameOrEmail(searchValue,id);
+        return ctx.body={
+            code:CODE_STATUS.IS_OK,
+            data:data,
+            message:"查询成功"
+        }
+    }catch (e){
+        return ctx.body={
+            code:CODE_STATUS.IS_FAILED,
+            data:null,
+            message:e.toString()
+        }
+    }
+
+})
 module.exports = router;
